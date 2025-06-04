@@ -19,6 +19,7 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.logging.Logging;
 import burp.api.montoya.ui.Selection;
 import burp.api.montoya.ui.editor.RawEditor;
@@ -33,6 +34,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  * Class to implement the "BTP" editor tab for HTTP responses
@@ -44,6 +49,18 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
     private HttpRequestResponse reqResp;
     private RawEditor editor;
     private BlazorHelper blazorHelper;
+    private static final Logger logger = Logger.getLogger("BTP");
+
+    static {
+        try {
+            FileHandler fh = new FileHandler("btp-extension.log", true);
+            fh.setFormatter(new SimpleFormatter());
+            logger.addHandler(fh);
+            logger.setLevel(Level.ALL);
+        } catch (Exception e) {
+            Logger.getAnonymousLogger().log(Level.WARNING, "Failed to set up file handler for BTP logger", e);
+        }
+    }
 
     /**
      * Constructs a new BTPHttpResponseEditor based on a given message
@@ -55,6 +72,7 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
         this.logging = this._montoya.logging();
         this.editor = this._montoya.userInterface().createRawEditor();
         this.blazorHelper = new BlazorHelper(this._montoya);
+        logger.info("[BTPHttpResponseEditor] Constructor called. Thread: " + Thread.currentThread().getName());
     }
 
     /**
@@ -64,6 +82,7 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      */
     @Override
     public HttpResponse getResponse() {
+        logger.info("[BTPHttpResponseEditor] getResponse() called.");
         return this.reqResp.response();
     }
 
@@ -73,7 +92,9 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      */
     @Override
     public void setRequestResponse(HttpRequestResponse requestResponse) {
+        logger.info("[BTPHttpResponseEditor] setRequestResponse() called. URL: " + (requestResponse != null ? requestResponse.url() : "null"));
         this.reqResp = requestResponse;
+        assert requestResponse != null;
         byte[] body = requestResponse.response().body().getBytes();
         ArrayList<GenericMessage> messages = this.blazorHelper.blazorUnpack(body);
         ByteArrayOutputStream outstream = new ByteArrayOutputStream();
@@ -81,11 +102,15 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
             String jsonStrMessages = this.blazorHelper.messageArrayToString(messages);
             outstream.write(jsonStrMessages.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            this.logging.logToError("[-] setRequestResponse - IOException while writing bytes to buffer: " + e.getMessage());
+            String msg = "[-] setRequestResponse - IOException while writing bytes to buffer: " + e.getMessage();
+            this.logging.logToError(msg);
+            logger.log(Level.WARNING, "[BTPHttpResponseEditor] " + msg, e);
             this.editor.setContents(ByteArray.byteArray("An error occurred while converting Blazor to JSON."));
             return;
         } catch (Exception e) {
-            this.logging.logToError("[-] setRequestResponse - Unexpected exception occurred: ");
+            String msg = "[-] setRequestResponse - Unexpected exception occurred: " + e.getMessage();
+            this.logging.logToError(msg);
+            logger.log(Level.SEVERE, "[BTPHttpResponseEditor] " + msg, e);
             this.editor.setContents(ByteArray.byteArray("An error occurred while converting Blazor to JSON."));
             return;
         }
@@ -99,31 +124,52 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      */
     @Override
     public boolean isEnabledFor(HttpRequestResponse requestResponse) {
+        String url = null;
+        try {
+            url = (requestResponse != null) ? requestResponse.url() : null;
+            logger.info("[BTPHttpResponseEditor] isEnabledFor() called. URL: " + url +
+                    ", Thread: " + Thread.currentThread().getName() + ", Time: " + System.currentTimeMillis());
+        } catch (Exception e) {
+            String msg = "[BTPHttpResponseEditor] isEnabledFor: Unexpected exception: " + e.getMessage();
+            logger.log(Level.SEVERE, msg, e);
+            if (this.logging != null) this.logging.logToError(msg);
+            return false;
+        }
+
         if (requestResponse == null || requestResponse.response() == null) {
-            return false;
-        }
-        if (requestResponse.response().httpVersion() == null) {
-            return false;
-        }
-        if (this._montoya.scope() == null) {
-            return false;
-        }
-        if (requestResponse.response().httpVersion() == null) {
-            return false;
-        }
-        if (!requestResponse.url().contains(BTPConstants.BLAZOR_URL)) {
-            return false;
-        }
-        if (!this._montoya.scope().isInScope(requestResponse.url())) {
+            logger.info("[BTPHttpResponseEditor] isEnabledFor: requestResponse or response is null.");
             return false;
         }
         if (requestResponse.response().body() == null || requestResponse.response().body().length() == 0) {
+            logger.info("[BTPHttpResponseEditor] isEnabledFor: response body is null or empty.");
             return false;
         }
-        // Response during negotiation containing "{}\x1e", not valid blazor and BTP tab shouldn't be enabled
-        if ( requestResponse.response().body().length() == 3 && requestResponse.response().body().toString().startsWith("{}")) {
+
+
+        // Accurate Content-Type extraction
+        String contentType = null;
+        for (HttpHeader header : requestResponse.response().headers()) {
+            if ("Content-Type".equalsIgnoreCase(header.name())) {
+                contentType = header.value();
+                break;
+            }
+        }
+        if (contentType == null || !contentType.toLowerCase().contains("application/octet-stream")) {
+            logger.info("[BTPHttpResponseEditor] isEnabledFor: Content-Type is not application/octet-stream.");
             return false;
         }
+        if (contentType == null || !contentType.toLowerCase().contains("application/octet-stream")) {
+            logger.info("[BTPHttpResponseEditor] isEnabledFor: Content-Type is not application/octet-stream.");
+            return false;
+        }
+
+        // Optionally keep your negotiation message filter
+        if (requestResponse.response().body().length() == 3 && requestResponse.response().body().toString().startsWith("{}")) {
+            logger.info("[BTPHttpResponseEditor] isEnabledFor: response body is negotiation message.");
+            return false;
+        }
+
+        logger.info("[BTPHttpResponseEditor] isEnabledFor: returning true.");
         return true;
     }
 
@@ -133,6 +179,7 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      */
     @Override
     public String caption() {
+        logger.info("[BTPHttpResponseEditor] caption() called.");
         return BTPConstants.CAPTION;
     }
 
@@ -142,6 +189,7 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      */
     @Override
     public Component uiComponent() {
+        logger.info("[BTPHttpResponseEditor] uiComponent() called.");
         return this.editor.uiComponent();
     }
 
@@ -151,6 +199,7 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      */
     @Override
     public Selection selectedData() {
+        logger.info("[BTPHttpResponseEditor] selectedData() called.");
         return this.editor.selection().get();
     }
 

@@ -22,7 +22,8 @@ import burp.api.montoya.logging.Logging;
 import com.gdssecurity.handlers.BTPHttpRequestHandler;
 import com.gdssecurity.handlers.BTPHttpResponseHandler;
 import com.gdssecurity.helpers.BTPConstants;
-import com.gdssecurity.providers.BTPContextMenuItemsProvider;
+//import com.gdssecurity.providers.BTPContextMenuItemsProvider;
+import com.gdssecurity.providers.BTPContextMenuFactory;
 import com.gdssecurity.providers.BTPHttpRequestEditorProvider;
 import com.gdssecurity.providers.BTPHttpResponseEditorProvider;
 import com.gdssecurity.views.BTPView;
@@ -62,8 +63,12 @@ public class BlazorTrafficProcessor implements BurpExtension, ExtensionUnloading
         this._montoya.userInterface().registerSuiteTab(BTPConstants.CAPTION, burpTab);
 
         // Setup the right-click menu items
-        BTPContextMenuItemsProvider menuItemsProvider = new BTPContextMenuItemsProvider(this._montoya, burpTab);
-        this._montoya.userInterface().registerContextMenuItemsProvider(menuItemsProvider);
+        //BTPContextMenuItemsProvider menuItemsProvider = new BTPContextMenuItemsProvider(this._montoya, burpTab);
+        //this._montoya.userInterface().registerContextMenuItemsProvider(menuItemsProvider);
+
+        // Setup the right-click menu items
+        BTPContextMenuFactory menuFactory = new BTPContextMenuFactory(this._montoya);
+        this._montoya.userInterface().registerContextMenuItemsProvider(menuFactory);
 
         this._montoya.extension().registerUnloadingHandler(this);
         this.logging.logToOutput(BTPConstants.LOADED_LOG_MSG);
