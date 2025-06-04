@@ -30,6 +30,9 @@ import com.gdssecurity.helpers.BTPConstants;
 import com.gdssecurity.helpers.BlazorHelper;
 
 import java.awt.*;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.ClipboardOwner;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +41,9 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import javax.swing.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * Class to implement the "BTP" editor tab for HTTP responses
@@ -73,6 +79,7 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
         this.editor = this._montoya.userInterface().createRawEditor();
         this.blazorHelper = new BlazorHelper(this._montoya);
         logger.info("[BTPHttpResponseEditor] Constructor called. Thread: " + Thread.currentThread().getName());
+        installEditorContextMenu();
     }
 
     /**
@@ -90,9 +97,12 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
      * Converts the provided HTTP response from BlazorPack to JSON, called when "BTP" tab is clicked
      * @param requestResponse - The response to deserialize from BlazorPack to JSON
      */
+    private HttpRequestResponse originalReqResp;
+
     @Override
     public void setRequestResponse(HttpRequestResponse requestResponse) {
         logger.info("[BTPHttpResponseEditor] setRequestResponse() called. URL: " + (requestResponse != null ? requestResponse.url() : "null"));
+        this.originalReqResp = requestResponse;
         this.reqResp = requestResponse;
         assert requestResponse != null;
         byte[] body = requestResponse.response().body().getBytes();
@@ -203,6 +213,94 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
         return this.editor.selection().get();
     }
 
+    private void installEditorContextMenu() {
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        // "Send to Repeater"
+        JMenuItem sendToRepeaterItem = new JMenuItem("Send to Repeater");
+        sendToRepeaterItem.addActionListener(e -> {
+            logger.info("[BTPHttpResponseEditor] 'Send to Repeater' clicked. Thread: " + Thread.currentThread().getName());
+            try {
+                if (this.originalReqResp != null && this.originalReqResp.response() != null) {
+                    _montoya.repeater().sendToRepeater(this.originalReqResp.request(), String.valueOf(this.originalReqResp.response()));
+                    logger.info("[BTPHttpResponseEditor] Sent to Repeater: " + (originalReqResp.url() != null ? originalReqResp.url() : "unknown URL"));
+                } else {
+                    logger.warning("[BTPHttpResponseEditor] Cannot send to Repeater: originalReqResp or response is null.");
+                    JOptionPane.showMessageDialog(null, "No valid response to send to Repeater.", "Send to Repeater", JOptionPane.WARNING_MESSAGE);
+                }
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "[BTPHttpResponseEditor] Error sending to Repeater", ex);
+                JOptionPane.showMessageDialog(null, "Failed to send to Repeater: " + ex.getMessage(), "Send to Repeater", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        popupMenu.add(sendToRepeaterItem);
+
+        // "Send to Intruder"
+        JMenuItem sendToIntruderItem = new JMenuItem("Send to Intruder");
+        sendToIntruderItem.addActionListener(e -> {
+            logger.info("[BTPHttpResponseEditor] 'Send to Intruder' clicked. Thread: " + Thread.currentThread().getName());
+            try {
+                if (this.originalReqResp != null && this.originalReqResp.request() != null) {
+                    _montoya.intruder().sendToIntruder(this.originalReqResp.request());
+                    logger.info("[BTPHttpResponseEditor] Sent to Intruder: " + (originalReqResp.url() != null ? originalReqResp.url() : "unknown URL"));
+                } else {
+                    logger.warning("[BTPHttpResponseEditor] Cannot send to Intruder: originalReqResp or request is null.");
+                    JOptionPane.showMessageDialog(null, "No valid request to send to Intruder.", "Send to Intruder", JOptionPane.WARNING_MESSAGE);
+                }
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "[BTPHttpResponseEditor] Error sending to Intruder", ex);
+                JOptionPane.showMessageDialog(null, "Failed to send to Intruder: " + ex.getMessage(), "Send to Intruder", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        //popupMenu.add(sendToIntruderItem);
+
+        // Separator
+        popupMenu.addSeparator();
+
+        // "Copy"
+        JMenuItem copyItem = new JMenuItem("Copy");
+        copyItem.addActionListener(e -> {
+            logger.info("[BTPHttpResponseEditor] 'Copy' clicked. Thread: " + Thread.currentThread().getName());
+            try {
+                java.util.Optional<Selection> selectionOpt = this.editor.selection();
+                String selected = "";
+                if (selectionOpt.isPresent()) {
+                    Selection sel = selectionOpt.get();
+                    selected = sel.contents().toString();
+                }
+                StringSelection selection = new StringSelection(selected);
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
+                logger.info("[BTPHttpResponseEditor] Copied selection to clipboard.");
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "[BTPHttpResponseEditor] Error copying to clipboard", ex);
+                JOptionPane.showMessageDialog(null, "Failed to copy: " + ex.getMessage(), "Copy", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        popupMenu.add(copyItem);
+
+        // Attach the popup menu to the editor component
+        Component editorComponent = this.editor.uiComponent();
+        editorComponent.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    popupMenu.show(editorComponent, e.getX(), e.getY());
+                    logger.info("[BTPHttpResponseEditor] Context menu shown (mousePressed). Thread: " + Thread.currentThread().getName());
+                }
+            }
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    popupMenu.show(editorComponent, e.getX(), e.getY());
+                    logger.info("[BTPHttpResponseEditor] Context menu shown (mouseReleased). Thread: " + Thread.currentThread().getName());
+                }
+            }
+        });
+    }
+
+
+
+
     /**
      * Checks if the editor text has been modified
      * @return true if it has, false otherwise
@@ -212,3 +310,5 @@ public class BTPHttpResponseEditor implements ExtensionProvidedHttpResponseEdito
         return this.editor.isModified();
     }
 }
+
+
