@@ -75,6 +75,47 @@ public class BTPHttpRequestEditor implements ExtensionProvidedHttpRequestEditor 
     private void installEditorContextMenu() {
         JPopupMenu popupMenu = new JPopupMenu();
 
+
+        // "Send to Repeater" menu item
+        JMenuItem sendToRepeaterItem = new JMenuItem("Send to Repeater");
+        sendToRepeaterItem.addActionListener(e -> {
+            logger.info("[BTPHttpRequestEditor] 'Send to Repeater' clicked. Thread: " + Thread.currentThread().getName());
+            try {
+                if (this.reqResp != null && this.reqResp.request() != null) {
+                    montoya.repeater().sendToRepeater(this.reqResp.request());
+                    logger.info("[BTPHttpRequestEditor] Sent to Repeater: " + (reqResp.url() != null ? reqResp.url() : "unknown URL"));
+                } else {
+                    logger.warning("[BTPHttpRequestEditor] Cannot send to Repeater: reqResp or request is null.");
+                    JOptionPane.showMessageDialog(null, "No valid request to send to Repeater.", "Send to Repeater", JOptionPane.WARNING_MESSAGE);
+                }
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "[BTPHttpRequestEditor] Error sending to Repeater", ex);
+                JOptionPane.showMessageDialog(null, "Failed to send to Repeater: " + ex.getMessage(), "Send to Repeater", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        popupMenu.add(sendToRepeaterItem);
+
+        // "Send to Intruder" menu item
+        JMenuItem sendToIntruderItem = new JMenuItem("Send to Intruder");
+        sendToIntruderItem.addActionListener(e -> {
+            logger.info("[BTPHttpRequestEditor] 'Send to Intruder' clicked. Thread: " + Thread.currentThread().getName());
+            try {
+                if (this.reqResp != null && this.reqResp.request() != null) {
+                    montoya.intruder().sendToIntruder(this.reqResp.request());
+                    logger.info("[BTPHttpRequestEditor] Sent to Intruder: " + (reqResp.url() != null ? reqResp.url() : "unknown URL"));
+                } else {
+                    logger.warning("[BTPHttpRequestEditor] Cannot send to Intruder: reqResp or request is null.");
+                    JOptionPane.showMessageDialog(null, "No valid request to send to Intruder.", "Send to Intruder", JOptionPane.WARNING_MESSAGE);
+                }
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "[BTPHttpRequestEditor] Error sending to Intruder", ex);
+                JOptionPane.showMessageDialog(null, "Failed to send to Intruder: " + ex.getMessage(), "Send to Intruder", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        popupMenu.add(sendToIntruderItem);
+
+        // Separator
+        popupMenu.addSeparator();
         JMenuItem copyItem = new JMenuItem("Copy");
         copyItem.addActionListener(e -> {
             try {
