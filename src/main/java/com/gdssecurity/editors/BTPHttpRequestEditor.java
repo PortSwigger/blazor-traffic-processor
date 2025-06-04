@@ -81,11 +81,11 @@ public class BTPHttpRequestEditor implements ExtensionProvidedHttpRequestEditor 
         sendToRepeaterItem.addActionListener(e -> {
             logger.info("[BTPHttpRequestEditor] 'Send to Repeater' clicked. Thread: " + Thread.currentThread().getName());
             try {
-                if (this.reqResp != null && this.reqResp.request() != null) {
-                    montoya.repeater().sendToRepeater(this.reqResp.request());
-                    logger.info("[BTPHttpRequestEditor] Sent to Repeater: " + (reqResp.url() != null ? reqResp.url() : "unknown URL"));
+                if (this.originalReqResp != null && this.originalReqResp.request() != null) {
+                    montoya.repeater().sendToRepeater(this.originalReqResp.request());
+                    logger.info("[BTPHttpRequestEditor] Sent to Repeater: " + (originalReqResp.url() != null ? originalReqResp.url() : "unknown URL"));
                 } else {
-                    logger.warning("[BTPHttpRequestEditor] Cannot send to Repeater: reqResp or request is null.");
+                    logger.warning("[BTPHttpRequestEditor] Cannot send to Repeater: originalReqResp or request is null.");
                     JOptionPane.showMessageDialog(null, "No valid request to send to Repeater.", "Send to Repeater", JOptionPane.WARNING_MESSAGE);
                 }
             } catch (Exception ex) {
@@ -100,11 +100,11 @@ public class BTPHttpRequestEditor implements ExtensionProvidedHttpRequestEditor 
         sendToIntruderItem.addActionListener(e -> {
             logger.info("[BTPHttpRequestEditor] 'Send to Intruder' clicked. Thread: " + Thread.currentThread().getName());
             try {
-                if (this.reqResp != null && this.reqResp.request() != null) {
-                    montoya.intruder().sendToIntruder(this.reqResp.request());
-                    logger.info("[BTPHttpRequestEditor] Sent to Intruder: " + (reqResp.url() != null ? reqResp.url() : "unknown URL"));
+                if (this.originalReqResp != null && this.originalReqResp.request() != null) {
+                    montoya.intruder().sendToIntruder(this.originalReqResp.request());
+                    logger.info("[BTPHttpRequestEditor] Sent to Intruder: " + (originalReqResp.url() != null ? originalReqResp.url() : "unknown URL"));
                 } else {
-                    logger.warning("[BTPHttpRequestEditor] Cannot send to Intruder: reqResp or request is null.");
+                    logger.warning("[BTPHttpRequestEditor] Cannot send to Intruder: originalReqResp or request is null.");
                     JOptionPane.showMessageDialog(null, "No valid request to send to Intruder.", "Send to Intruder", JOptionPane.WARNING_MESSAGE);
                 }
             } catch (Exception ex) {
@@ -112,7 +112,9 @@ public class BTPHttpRequestEditor implements ExtensionProvidedHttpRequestEditor 
                 JOptionPane.showMessageDialog(null, "Failed to send to Intruder: " + ex.getMessage(), "Send to Intruder", JOptionPane.ERROR_MESSAGE);
             }
         });
-        popupMenu.add(sendToIntruderItem);
+
+        // hide for now
+       // popupMenu.add(sendToIntruderItem);
 
         // Separator
         popupMenu.addSeparator();
@@ -220,10 +222,13 @@ public class BTPHttpRequestEditor implements ExtensionProvidedHttpRequestEditor 
      * Handles filtering: disables the editor and shows a message if not a BlazorPack request.
      * @param requestResponse The request to deserialize from BlazorPack to JSON.
      */
+
+    private HttpRequestResponse originalReqResp;
     @Override
     public void setRequestResponse(HttpRequestResponse requestResponse) {
         logger.info(() -> String.format("[%1$tF %1$tT][%2$s][BTPHttpRequestEditor] setRequestResponse() called. URL: %3$s",
                 System.currentTimeMillis(), Thread.currentThread().getName(), (requestResponse != null ? safeUrl(requestResponse) : "null")));
+        this.originalReqResp = requestResponse; // Save the original for context menu actions
         this.reqResp = requestResponse;
 
         // Filtering: Only handle BlazorPack requests
