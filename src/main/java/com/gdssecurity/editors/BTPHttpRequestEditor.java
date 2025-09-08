@@ -138,9 +138,11 @@ public class BTPHttpRequestEditor implements ExtensionProvidedHttpRequestEditor 
         if (requestResponse.url() == null) {
             return false;
         }
+        /*
         if (!this._montoya.scope().isInScope(requestResponse.url())) {
             return false;
         }
+        */
         if (requestResponse.request().contentType() == ContentType.JSON) {
             return false;
         }

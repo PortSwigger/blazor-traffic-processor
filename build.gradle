@@ -3,9 +3,8 @@ plugins {
     id 'application'
 }
 
-group 'com.gdssecurity'
-version '1.0'
-sourceCompatibility = 17
+group = 'com.gdssecurity'
+version = '1.0'
 
 repositories {
     mavenCentral()
