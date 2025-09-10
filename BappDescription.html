@@ -1,26 +1,26 @@
-<p>A BurpSuite extension to aid pentesting web applications that use Blazor Server/BlazorPack. Primary functionality includes converting BlazorPack messages to JSON and vice versa, introduces tamperability for BlazorPack serialized messages.</p>
+<p>A penetration testing tool that enables security assessment of Blazor Server applications by converting BlazorPack
+	serialized messages to human-readable JSON format and back. This extension makes it possible to inspect, modify, and
+	tamper with Blazor Server communications that would otherwise be opaque binary data.</p>
 
-<p>Usage</p>
+<h2>Features</h2>
 <ul>
-	<li>All BlazorPack-enabled requests or responses will be highlighted as Cyan within the "HTTP History" tab in Burpsuite.</li>
-	<li>The "BTP" request/response editor tab, which appears on each in-scope request or response that contains BlazorPack messages.
-		<ul>
-			<li>Clicking on this tab will convert the serialized data from BlazorPack to JSON.</li>
-			<li>After editing the JSON (either in Intercept or Repeater), click the "Raw" tab to re-serialize with your payloads</li>
-		</ul>
-	</li>
-	<li>The "BTP" Burpsuite tab, which allows for ad-hoc conversions of Blazor-&gt;JSON and JSON-&gt;Blazor
-		<ul>
-			<li>The left-hand editor is for your input (JSON or raw Blazor)</li>
-			<li>The right-hand editor is for the results of the conversion</li>
-			<li>A drop-down menu on the bottom of the window lets you select "Blazor-&gt;JSON" or "JSON-&gt;Blazor"</li>
-			<li>The Serialize/Deserialize button at the top is how you trigger the conversion</li>
-		</ul>
-	</li>
-	<li>Right-click menu option called "Send body to BTP tab"
-		<ul>
-			<li>You can right-click any request or response and select "Extensions" -&gt; "BlazorTrafficProcessor" -&gt; "Send body to BTP tab"</li>
-			<li>This sends either the selected request or response body to the BTP tab, so you don't have to worry about copying/pasting raw bytes</li>
-		</ul>
-	</li>
+	<li>Converts BlazorPack messages to JSON and back</li>
+	<li>Highlights BlazorPack traffic in HTTP history</li>
+	<li>Editor tabs for modifying messages in-line (requires in-scope traffic)</li>
+	<li>Standalone conversion tab for manual processing</li>
+	<li>Automatically downgrades WebSocket connections to HTTP</li>
 </ul>
+
+<h2>Usage</h2>
+<ol>
+	<li>Add the Blazor Server application to your target scope</li>
+	<li>Navigate to the Blazor Server application through the proxy</li>
+	<li>BlazorPack-enabled requests and responses will automatically appear highlighted in cyan in the HTTP History</li>
+	<li>Click the "BTP" tab on in-scope requests or responses containing BlazorPack data to view the JSON representation
+	</li>
+	<li>Modify the JSON as needed for your security testing</li>
+	<li>Switch to the "Raw" tab to re-serialize your modifications back to BlazorPack format</li>
+	<li>Use the dedicated "BTP" suite tab for standalone conversions between formats</li>
+	<li>Right-click any request or response and select "Extensions &rarr; Blazor Traffic Processor &rarr; Send body to BTP tab" to quickly
+		transfer message bodies for analysis</li>
+</ol>
